@@ -1,0 +1,40 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build output
+dist
+
+# Tests & Coverage
+coverage
+*.spec.ts
+test
+
+# Environment (secrets should be injected at runtime)
+.env
+.env.*
+
+# Version control
+.git
+.gitignore
+
+# IDE / Editors
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Docs & Agents
+README.md
+.agents
+.gemini
+skills-lock.json

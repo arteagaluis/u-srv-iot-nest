@@ -1,0 +1,60 @@
+services:
+  # ─────────────────────────────────────────────
+  # NestJS IoT Auth Service (Development)
+  # ─────────────────────────────────────────────
+  iot-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: iot-api-dev
+    restart: unless-stopped
+    command: npm run start:dev
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=development
+      - MONGODB_URI=mongodb://mongo:27017/iot-auth-db
+    volumes:
+      - ./src:/app/src
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.build.json:/app/tsconfig.build.json
+      - ./nest-cli.json:/app/nest-cli.json
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Debug port
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # ─────────────────────────────────────────────
+  # MongoDB Database (Development)
+  # ─────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: iot-mongo-dev
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_DATABASE=iot-auth-db
+    volumes:
+      - mongo_data_dev:/data/db
+    ports:
+      - "27017:27017"  # Exposed for local tools (Compass, etc.)
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mongo_data_dev:
+    driver: local
+
+networks:
+  internal:
+    driver: bridge
