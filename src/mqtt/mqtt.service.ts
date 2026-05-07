@@ -190,7 +190,7 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Maneja el evento de telemetría: propaga el dato a Next.js por Socket.io.
+   * Maneja el evento de telemetría: guarda en DB y propaga a Next.js por Socket.io.
    */
   private async handleTelemetry(
     deviceId: string,
@@ -198,15 +198,21 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
   ): Promise<void> {
     this.logger.debug(`Telemetry event from device "${deviceId}"`);
     
-    // Aquí puedes guardar en BD histórica (ej. TimeSeries, InfluxDB o MongoDB)
-    // await this.devicesService.saveTelemetry(deviceId, payload);
-    
-    // Propagación instantánea al frontend
-    this.eventsGateway.server.emit('device:telemetry', {
-      deviceId,
-      data: payload,
-      timestamp: new Date().toISOString(),
-    });
+    try {
+      // 1. Guardar en BD histórica para gráficas y análisis
+      await this.devicesService.saveTelemetry(deviceId, payload);
+      
+      // 2. Propagación instantánea al frontend vía Socket.io
+      this.eventsGateway.server.emit('device:telemetry', {
+        deviceId,
+        data: payload,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to process telemetry for device "${deviceId}": ${(err as Error).message}`,
+      );
+    }
   }
 
   /**

@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -107,5 +108,20 @@ export class DevicesController {
     @Request() req,
   ) {
     return this.devicesService.revokeShare(deviceId, req.user.userId, userId);
+  }
+
+  /**
+   * GET /devices/:deviceId/telemetry
+   * Obtiene el histórico de datos (sensores) para graficar en el frontend.
+   */
+  @Get(':deviceId/telemetry')
+  @UseGuards(JwtAuthGuard)
+  getTelemetry(
+    @Param('deviceId') deviceId: string,
+    @Request() req,
+    @Query('limit') limit?: string,
+  ) {
+    const limitNum = limit ? parseInt(limit, 10) : 50;
+    return this.devicesService.getTelemetry(deviceId, req.user.userId, limitNum);
   }
 }

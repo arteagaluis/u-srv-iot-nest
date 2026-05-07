@@ -11,11 +11,13 @@ import { CreateDeviceDto } from './dto/create-device.dto';
 import { ShareDeviceDto } from './dto/share-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
 import { Device, DeviceDocument } from './schemas/device.schema';
+import { Telemetry, TelemetryDocument } from './schemas/telemetry.schema';
 
 @Injectable()
 export class DevicesService {
   constructor(
     @InjectModel(Device.name) private readonly deviceModel: Model<DeviceDocument>,
+    @InjectModel(Telemetry.name) private readonly telemetryModel: Model<TelemetryDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
@@ -176,6 +178,36 @@ export class DevicesService {
         ...(isOnline && { status: 'active' }),
       },
     );
+  }
+
+  /**
+   * Guarda los datos de telemetría en el histórico de MongoDB.
+   */
+  async saveTelemetry(deviceId: string, data: Record<string, any>): Promise<void> {
+    await this.telemetryModel.create({
+      deviceId,
+      data,
+      timestamp: new Date(),
+    });
+  }
+
+  /**
+   * Obtiene el histórico de telemetría de un dispositivo.
+   * Verifica que el usuario tenga acceso (propietario o compartido).
+   */
+  async getTelemetry(
+    deviceId: string,
+    userId: string,
+    limit = 50,
+  ): Promise<TelemetryDocument[]> {
+    const device = await this.findByDeviceIdOrFail(deviceId);
+    this.assertAccess(device, userId);
+
+    return this.telemetryModel
+      .find({ deviceId })
+      .sort({ timestamp: -1 }) // Los más recientes primero
+      .limit(limit)
+      .exec();
   }
 
   // ─── Helpers privados ───────────────────────────────────────────────────────
