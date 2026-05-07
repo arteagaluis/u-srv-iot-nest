@@ -15,6 +15,7 @@ services:
     environment:
       - NODE_ENV=development
       - MONGODB_URI=mongodb://mongo:27017/iot-auth-db
+      - EMQX_BROKER_URL=mqtt://emqx:1883
     volumes:
       - ./src:/app/src
       - ./tsconfig.json:/app/tsconfig.json
@@ -25,6 +26,8 @@ services:
       - "9229:9229"  # Debug port
     depends_on:
       mongo:
+        condition: service_healthy
+      emqx:
         condition: service_healthy
     networks:
       - internal
@@ -51,8 +54,35 @@ services:
       retries: 3
       start_period: 10s
 
+  # ─────────────────────────────────────────────
+  # EMQX MQTT Broker (Development)
+  # Dashboard: http://localhost:18083  (admin / public)
+  # MQTT TCP:  localhost:1883
+  # MQTT WS:   ws://localhost:8083/mqtt
+  # ─────────────────────────────────────────────
+  emqx:
+    image: emqx:5
+    container_name: iot-emqx-dev
+    restart: unless-stopped
+    ports:
+      - "1883:1883"    # MQTT over TCP
+      - "8083:8083"    # MQTT over WebSocket
+      - "18083:18083"  # EMQX Dashboard (admin:public)
+    volumes:
+      - emqx_data_dev:/opt/emqx/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "/opt/emqx/bin/emqx", "ctl", "status"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
 volumes:
   mongo_data_dev:
+    driver: local
+  emqx_data_dev:
     driver: local
 
 networks:

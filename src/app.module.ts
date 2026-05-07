@@ -2,7 +2,10 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from './auth/auth.module';
+import { DevicesModule } from './devices/devices.module';
 import { HealthModule } from './health/health.module';
+import { MqttModule } from './mqtt/mqtt.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
     imports: [
@@ -18,6 +21,9 @@ import { HealthModule } from './health/health.module';
         }),
         AuthModule,
         HealthModule,
+        DevicesModule,
+        MqttModule,
+        EventsModule,
     ],
 })
 export class AppModule {}
