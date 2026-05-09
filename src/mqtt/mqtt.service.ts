@@ -25,6 +25,8 @@ interface StatusPayload {
 export class MqttService implements OnModuleInit, OnModuleDestroy {
   private client: MqttClient;
   private readonly logger = new Logger(MqttService.name);
+  private lastTelemetrySaveMap = new Map<string, number>();
+  private readonly THROTTLE_TIME_MS = 60 * 60 * 1000; // 1 hora en milisegundos
 
   constructor(
     private readonly configService: ConfigService,
@@ -196,22 +198,27 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
     deviceId: string,
     payload: Record<string, unknown>,
   ): Promise<void> {
-    this.logger.debug(`Telemetry event from device "${deviceId}"`);
-    
-    try {
-      // 1. Guardar en BD histórica para gráficas y análisis
-      await this.devicesService.saveTelemetry(deviceId, payload);
-      
-      // 2. Propagación instantánea al frontend vía Socket.io
-      this.eventsGateway.server.emit('device:telemetry', {
-        deviceId,
-        data: payload,
-        timestamp: new Date().toISOString(),
-      });
-    } catch (err) {
-      this.logger.error(
-        `Failed to process telemetry for device "${deviceId}": ${(err as Error).message}`,
-      );
+    // 1. Propagación instantánea al frontend vía Socket.io (SIEMPRE ocurre)
+    this.eventsGateway.server.emit('device:telemetry', {
+      deviceId,
+      data: payload,
+      timestamp: new Date().toISOString(),
+    });
+
+    // 2. Throttling para guardar en BD (solo 1 vez por hora)
+    const now = Date.now();
+    const lastSaveTime = this.lastTelemetrySaveMap.get(deviceId) || 0;
+
+    if (now - lastSaveTime >= this.THROTTLE_TIME_MS) {
+      try {
+        await this.devicesService.saveTelemetry(deviceId, payload);
+        this.lastTelemetrySaveMap.set(deviceId, now);
+        this.logger.debug(`Telemetry saved to DB for device "${deviceId}" (Throttled)`);
+      } catch (err) {
+        this.logger.error(
+          `Failed to save telemetry to DB for device "${deviceId}": ${(err as Error).message}`,
+        );
+      }
     }
   }
 
