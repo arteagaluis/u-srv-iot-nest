@@ -63,6 +63,12 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   private extractToken(client: Socket): string | null {
+    // Intentar extraer de auth payload (Socket.IO v3+)
+    const authToken = client.handshake.auth?.token;
+    if (authToken) {
+      return authToken;
+    }
+
     // Intentar extraer de headers (Authorization: Bearer <token>)
     const authHeader = client.handshake.headers.authorization;
     if (authHeader && authHeader.split(' ')[0] === 'Bearer') {
