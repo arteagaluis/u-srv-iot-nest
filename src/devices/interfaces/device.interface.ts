@@ -1,11 +1,18 @@
 import { Types } from 'mongoose';
 
+export interface ISharedUser {
+  _id: string | Types.ObjectId;
+  email: string;
+  name: string;
+  picture?: string;
+}
+
 export interface IDevice {
   deviceId: string;
   name: string;
   description?: string;
   ownerId: Types.ObjectId;
-  sharedWith: Types.ObjectId[];
+  sharedWith: Types.ObjectId[] | ISharedUser[];
   isOnline: boolean;
   status: 'pending' | 'active' | 'inactive';
   lastSeen?: Date;

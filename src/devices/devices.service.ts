@@ -79,10 +79,20 @@ export class DevicesService {
   /**
    * Retorna el detalle de un dispositivo si el usuario tiene acceso.
    * Incluye el campo calculado `isOwner` igual que en `getMyDevices`.
+   * Puebla `sharedWith` para que el dueño vea la lista de emails/nombres.
    */
   async getOneDevice(deviceId: string, userId: string): Promise<IDeviceWithRole> {
-    const device = await this.findByDeviceIdOrFail(deviceId);
+    const device = await this.deviceModel
+      .findOne({ deviceId })
+      .populate('sharedWith', 'email name picture')
+      .exec();
+
+    if (!device) {
+      throw new NotFoundException(`Device not found: ${deviceId}`);
+    }
+
     this.assertAccess(device, userId);
+
     return {
       ...device.toObject(),
       isOwner: device.ownerId.toString() === userId,
