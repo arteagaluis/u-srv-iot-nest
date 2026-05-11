@@ -10,6 +10,7 @@ import { User, UserDocument } from '../users/schemas/user.schema';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { ShareDeviceDto } from './dto/share-device.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
+import { IDeviceWithRole } from './interfaces/device.interface';
 import { Device, DeviceDocument } from './schemas/device.schema';
 import { Telemetry, TelemetryDocument } from './schemas/telemetry.schema';
 
@@ -57,24 +58,35 @@ export class DevicesService {
   /**
    * Lista todos los dispositivos accesibles por el usuario:
    * propios (ownerId) + compartidos (sharedWith).
+   * Incluye el campo calculado `isOwner` para que el frontend pueda
+   * determinar qué acciones (editar, eliminar, compartir) están permitidas.
    */
-  async getMyDevices(userId: string): Promise<DeviceDocument[]> {
+  async getMyDevices(userId: string): Promise<IDeviceWithRole[]> {
     const userObjectId = new Types.ObjectId(userId);
-    return this.deviceModel
+    const devices = await this.deviceModel
       .find({
         $or: [{ ownerId: userObjectId }, { sharedWith: userObjectId }],
       })
       .lean()
       .exec();
+
+    return devices.map((device) => ({
+      ...device,
+      isOwner: device.ownerId.toString() === userId,
+    }));
   }
 
   /**
    * Retorna el detalle de un dispositivo si el usuario tiene acceso.
+   * Incluye el campo calculado `isOwner` igual que en `getMyDevices`.
    */
-  async getOneDevice(deviceId: string, userId: string): Promise<DeviceDocument> {
+  async getOneDevice(deviceId: string, userId: string): Promise<IDeviceWithRole> {
     const device = await this.findByDeviceIdOrFail(deviceId);
     this.assertAccess(device, userId);
-    return device;
+    return {
+      ...device.toObject(),
+      isOwner: device.ownerId.toString() === userId,
+    };
   }
 
   /**
